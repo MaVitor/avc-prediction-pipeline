@@ -4,6 +4,10 @@ from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 from imblearn.over_sampling import SMOTE
+from imblearn.pipeline import Pipeline as PipelineComBalanceamento
+
+# Coluna que queremos prever
+COLUNA_ALVO = 'stroke'
 
 def carregar_e_limpar_dados(caminho_dados):
     """
@@ -20,6 +24,15 @@ def carregar_e_limpar_dados(caminho_dados):
     df = df[df['gender'] != 'Other']
     
     return df
+
+def separar_features_e_alvo(df):
+    """
+    Divide o DataFrame limpo entre as variáveis explicativas (X) e a variável alvo (y).
+    """
+    X = df.drop(COLUNA_ALVO, axis=1)
+    y = df[COLUNA_ALVO]
+
+    return X, y
 
 def criar_preparador_dados():
     """
@@ -53,5 +66,24 @@ def aplicar_balanceamento_smote(X, y):
     """
     smote = SMOTE(random_state=42)
     X_balanceado, y_balanceado = smote.fit_resample(X, y)
-    
+
     return X_balanceado, y_balanceado
+
+def criar_pipeline_completo(modelo):
+    """
+    Encadeia preparação -> balanceamento -> modelo em um único objeto treinável.
+
+    Usa o Pipeline do imbalanced-learn (e não o do Scikit-Learn) porque só ele
+    aplica o SMOTE exclusivamente no treino: durante `predict`, a etapa de
+    balanceamento é ignorada. Isso evita gerar dados sintéticos na validação/teste,
+    o que inflaria artificialmente as métricas.
+
+    Como o objeto retornado carrega a preparação dentro de si, o arquivo exportado
+    na Fase 3 recebe o paciente em formato bruto, sem precisar repetir a
+    imputação e o escalonamento na aplicação web da Fase 5.
+    """
+    return PipelineComBalanceamento(steps=[
+        ('preparador', criar_preparador_dados()),
+        ('balanceador', SMOTE(random_state=42)),
+        ('modelo', modelo)
+    ])

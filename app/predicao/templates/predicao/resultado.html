@@ -1,0 +1,45 @@
+{% comment %}
+Fragmento devolvido ao HTMX, que substitui apenas o conteúdo de #resultado.
+Não é uma página completa: sem <html>, sem <head>.
+{% endcomment %}
+
+{% if erro %}
+  <p style="color: #d03b3b; font-size: 14px; margin: 0;">
+    <strong>Não foi possível avaliar.</strong><br>{{ erro }}
+  </p>
+{% else %}
+  <div style="display: flex; align-items: baseline; gap: 10px;">
+    <span style="font-size: 44px; font-weight: 600; line-height: 1;">{{ resultado.percentual }}%</span>
+    <span style="font-size: 13px; color: #52514e;">de probabilidade estimada</span>
+  </div>
+
+  {# A faixa vem sempre com texto, nunca só com a cor #}
+  <p style="margin: 14px 0 0;">
+    <span style="display: inline-block; padding: 4px 12px; border-radius: 999px; font-size: 13px; font-weight: 600; color: #fff;
+      background: {% if resultado.faixa_risco == 'Alto' %}#d03b3b{% elif resultado.faixa_risco == 'Moderado' %}#ec835a{% else %}#0ca30c{% endif %};">
+      Risco {{ resultado.faixa_risco }}
+    </span>
+  </p>
+
+  <div style="margin-top: 18px; font-size: 13px; color: #52514e; line-height: 1.65;">
+    <p style="margin: 0 0 8px;">
+      O modelo sinaliza <strong>alto risco</strong> a partir de {{ resultado.limiar_percentual }}%
+      de probabilidade — limiar escolhido na validação para equilibrar Precision e Recall.
+      Este paciente {% if resultado.alto_risco %}<strong>atingiu</strong>{% else %}não atingiu{% endif %} esse corte.
+    </p>
+    {% if resultado.imc_imputado %}
+      <p style="margin: 0 0 8px; color: #898781;">
+        IMC não informado: o pipeline usou a mediana aprendida no treino.
+      </p>
+    {% endif %}
+    <p style="margin: 0; color: #898781;">
+      Previsto por: {{ resultado.modelo }}.
+    </p>
+  </div>
+
+  <p style="margin: 18px 0 0; padding-top: 14px; border-top: 1px solid rgba(11,11,11,0.10);
+            font-size: 12px; color: #898781; line-height: 1.55;">
+    Ferramenta acadêmica de triagem, treinada em 5.109 registros públicos.
+    <strong>Não é diagnóstico médico</strong> e não substitui avaliação profissional.
+  </p>
+{% endif %}
