@@ -1,44 +1,57 @@
-{% comment %}
+{% load l10n %}{% comment %}
 Fragmento devolvido ao HTMX, que substitui apenas o conteúdo de #resultado.
-Não é uma página completa: sem <html>, sem <head>.
+Não é uma página completa: sem <html>, sem <head>. Os estilos das classes usadas aqui
+ficam no <style> do index.html, que é a página que recebe este pedaço.
+
+Os números dentro de atributos `style` levam `|unlocalize` porque o projeto roda em pt-BR:
+sem isso o Django escreveria `width: 90,2%` (com vírgula) e o CSS seria descartado.
+No texto visível a vírgula é justamente o que queremos, então lá ele não aparece.
 {% endcomment %}
 
 {% if erro %}
-  <p style="color: #d03b3b; font-size: 14px; margin: 0;">
-    <strong>Não foi possível avaliar.</strong><br>{{ erro }}
-  </p>
+  <div class="erro">
+    <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="9"/><path d="M12 7v6M12 16.5v.01"/>
+    </svg>
+    <div><strong>Não foi possível avaliar.</strong><br>{{ erro }}</div>
+  </div>
 {% else %}
-  <div style="display: flex; align-items: baseline; gap: 10px;">
-    <span style="font-size: 44px; font-weight: 600; line-height: 1;">{{ resultado.percentual }}%</span>
-    <span style="font-size: 13px; color: #52514e;">de probabilidade estimada</span>
+  <div class="numerao">
+    <b>{{ resultado.percentual }}%</b>
+    <span>de probabilidade<br>estimada</span>
   </div>
 
-  {# A faixa vem sempre com texto, nunca só com a cor #}
-  <p style="margin: 14px 0 0;">
-    <span style="display: inline-block; padding: 4px 12px; border-radius: 999px; font-size: 13px; font-weight: 600; color: #fff;
-      background: {% if resultado.faixa_risco == 'Alto' %}#d03b3b{% elif resultado.faixa_risco == 'Moderado' %}#ec835a{% else %}#0ca30c{% endif %};">
-      Risco {{ resultado.faixa_risco }}
-    </span>
-  </p>
+  {# A faixa vem sempre escrita, nunca só na cor #}
+  <span class="etiqueta faixa-{{ resultado.faixa_risco|lower }}">Risco {{ resultado.faixa_risco }}</span>
 
-  <div style="margin-top: 18px; font-size: 13px; color: #52514e; line-height: 1.65;">
-    <p style="margin: 0 0 8px;">
+  <div class="medidor">
+    <div class="medidor-trilha"
+         role="img"
+         aria-label="Probabilidade de {{ resultado.percentual }}% em uma escala de 0 a 100%, com o limiar de alto risco em {{ resultado.limiar_percentual }}%.">
+      <div class="medidor-preenchimento faixa-{{ resultado.faixa_risco|lower }}"
+           style="width: {{ resultado.percentual|unlocalize }}%"></div>
+      <div class="medidor-limiar" style="left: {{ resultado.limiar_percentual|unlocalize }}%"></div>
+    </div>
+    <div class="medidor-escala">
+      <span>0%</span>
+      <span>limiar de alto risco: {{ resultado.limiar_percentual }}%</span>
+      <span>100%</span>
+    </div>
+  </div>
+
+  <div class="notas">
+    <p>
       O modelo sinaliza <strong>alto risco</strong> a partir de {{ resultado.limiar_percentual }}%
-      de probabilidade — limiar escolhido na validação para equilibrar Precision e Recall.
-      Este paciente {% if resultado.alto_risco %}<strong>atingiu</strong>{% else %}não atingiu{% endif %} esse corte.
+      — limiar escolhido na validação para equilibrar Precision e Recall. Este paciente
+      {% if resultado.alto_risco %}<strong>atingiu</strong>{% else %}não atingiu{% endif %} esse corte.
     </p>
     {% if resultado.imc_imputado %}
-      <p style="margin: 0 0 8px; color: #898781;">
-        IMC não informado: o pipeline usou a mediana aprendida no treino.
-      </p>
+      <p class="sutil">IMC não informado: o pipeline usou a mediana aprendida no treino.</p>
     {% endif %}
-    <p style="margin: 0; color: #898781;">
-      Previsto por: {{ resultado.modelo }}.
-    </p>
+    <p class="sutil">Previsto por: {{ resultado.modelo }}.</p>
   </div>
 
-  <p style="margin: 18px 0 0; padding-top: 14px; border-top: 1px solid rgba(11,11,11,0.10);
-            font-size: 12px; color: #898781; line-height: 1.55;">
+  <p class="aviso">
     Ferramenta acadêmica de triagem, treinada em 5.109 registros públicos.
     <strong>Não é diagnóstico médico</strong> e não substitui avaliação profissional.
   </p>

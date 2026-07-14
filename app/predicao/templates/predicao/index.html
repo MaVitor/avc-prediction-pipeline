@@ -1,15 +1,20 @@
-{% load static %}<!doctype html>
+<!doctype html>
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Avaliação de Risco de AVC</title>
-{# Por padrão o HTMX ignora respostas 4xx/5xx e não troca nada na tela, o que faria o
-   botão parecer quebrado quando a validação falha. Aqui os erros também são trocados,
-   para que a mensagem apareça — sem abrir mão do status HTTP correto na resposta. #}
+{% comment %}
+Por padrão o HTMX ignora respostas 4xx/5xx e não troca nada na tela, o que faria o
+botão parecer quebrado quando a validação falha. Aqui os erros também são trocados,
+para que a mensagem apareça — sem abrir mão do status HTTP correto na resposta.
+({# #} só vale para uma linha; um comentário de várias linhas precisa deste bloco,
+senão o Django imprime o texto na página.)
+{% endcomment %}
 <meta name="htmx-config" content='{"responseHandling":[{"code":"204","swap":false},{"code":"[23]..","swap":true},{"code":"[45]..","swap":true}]}'>
 <script src="https://unpkg.com/htmx.org@2.0.4"></script>
 <style>
+  /* Mesma paleta do dashboard da Fase 4, validada para daltonismo. */
   :root {
     color-scheme: light;
     --superficie: #fcfcfb;
@@ -19,168 +24,367 @@
     --tinta-apagada: #898781;
     --borda: rgba(11, 11, 11, 0.10);
     --azul: #2a78d6;
-    --vermelho: #e34948;
-    --amarelo: #eda100;
-    --verde: #0ca30c;
+    --azul-escuro: #256abf;
+    --alto: #d03b3b;
+    --moderado: #ec835a;
+    --baixo: #0ca30c;
+    --sombra: 0 1px 2px rgba(11, 11, 11, 0.04), 0 8px 24px -12px rgba(11, 11, 11, 0.18);
   }
+
   * { box-sizing: border-box; }
+
   body {
     margin: 0;
-    padding: 32px 24px 64px;
+    padding: 40px 24px 72px;
     background: var(--plano);
     color: var(--tinta);
     font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
     line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
   }
-  .conteudo { max-width: 1000px; margin: 0 auto; }
-  header { margin-bottom: 28px; }
-  h1 { font-size: 26px; margin: 0 0 6px; letter-spacing: -0.01em; }
-  .subtitulo { color: var(--tinta-secundaria); margin: 0; font-size: 14px; }
-  .subtitulo a { color: var(--azul); }
+
+  .conteudo { max-width: 1020px; margin: 0 auto; }
+
+  /* ---------- cabeçalho ---------- */
+
+  header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 30px;
+  }
+  .marca {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: linear-gradient(140deg, var(--azul), #1c5cab);
+    box-shadow: var(--sombra);
+  }
+  .marca svg { width: 24px; height: 24px; stroke: #fff; fill: none; stroke-width: 2; }
+  h1 { font-size: 24px; margin: 0; letter-spacing: -0.015em; }
+  .subtitulo { color: var(--tinta-secundaria); margin: 2px 0 0; font-size: 13.5px; }
+  .subtitulo a {
+    color: var(--azul);
+    text-decoration: none;
+    border-bottom: 1px solid rgba(42, 120, 214, 0.3);
+  }
+  .subtitulo a:hover { border-bottom-color: var(--azul); }
+
+  /* ---------- estrutura ---------- */
+
   .colunas {
     display: grid;
-    grid-template-columns: 1.15fr 1fr;
+    grid-template-columns: 1.2fr 1fr;
     gap: 20px;
     align-items: start;
   }
   .cartao {
     background: var(--superficie);
     border: 1px solid var(--borda);
-    border-radius: 10px;
-    padding: 22px;
+    border-radius: 14px;
+    padding: 24px;
+    box-shadow: var(--sombra);
   }
-  h2 { font-size: 15px; margin: 0 0 16px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--tinta-apagada); }
+  .cartao-resultado { position: sticky; top: 24px; }
+
+  h2 {
+    font-size: 11px;
+    margin: 0 0 16px;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    color: var(--tinta-apagada);
+    font-weight: 600;
+  }
+
+  /* ---------- formulário ---------- */
+
+  fieldset { border: 0; padding: 0; margin: 0 0 22px; }
+  fieldset:last-of-type { margin-bottom: 0; }
+  legend {
+    padding: 0 0 12px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--tinta);
+  }
   .campos { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-  .campo { display: flex; flex-direction: column; gap: 5px; }
-  .campo.largo { grid-column: 1 / -1; }
-  label { font-size: 13px; font-weight: 500; }
-  .dica { font-size: 12px; color: var(--tinta-apagada); font-weight: 400; }
+  .campo { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+  label { font-size: 12.5px; font-weight: 500; color: var(--tinta-secundaria); }
+  .dica { color: var(--tinta-apagada); font-weight: 400; }
+
   input, select {
     font: inherit;
     font-size: 14px;
-    padding: 8px 10px;
-    border: 1px solid #c3c2b7;
-    border-radius: 7px;
+    width: 100%;
+    padding: 9px 11px;
+    border: 1px solid #d8d7d0;
+    border-radius: 8px;
     background: #fff;
     color: var(--tinta);
+    transition: border-color 0.12s, box-shadow 0.12s;
   }
-  input:focus, select:focus { outline: 2px solid var(--azul); outline-offset: 1px; border-color: var(--azul); }
+  input:hover, select:hover { border-color: #b9b8b0; }
+  input:focus, select:focus {
+    outline: 0;
+    border-color: var(--azul);
+    box-shadow: 0 0 0 3px rgba(42, 120, 214, 0.16);
+  }
+  select {
+    appearance: none;
+    /* Seta desenhada em SVG embutido: evita depender de arquivo externo */
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 4.5L6 8l3.5-3.5' stroke='%23898781' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    background-size: 12px;
+    padding-right: 30px;
+  }
+
   button {
-    margin-top: 18px;
+    margin-top: 22px;
     width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
     font: inherit;
     font-size: 15px;
     font-weight: 600;
-    padding: 11px;
+    padding: 12px;
     border: 0;
-    border-radius: 7px;
+    border-radius: 9px;
     background: var(--azul);
     color: #fff;
     cursor: pointer;
+    transition: background 0.12s, transform 0.06s;
   }
-  button:hover { background: #256abf; }
-  .vazio { color: var(--tinta-apagada); font-size: 14px; }
-  .htmx-request #resultado { opacity: 0.45; transition: opacity 0.15s; }
-  @media (max-width: 760px) {
-    .colunas { grid-template-columns: 1fr; }
-    .campos { grid-template-columns: 1fr; }
+  button:hover { background: var(--azul-escuro); }
+  button:active { transform: translateY(1px); }
+
+  /* O HTMX marca o formulário com .htmx-request enquanto a requisição está no ar */
+  .girador { display: none; width: 15px; height: 15px; }
+  form.htmx-request .girador { display: block; animation: girar 0.7s linear infinite; }
+  form.htmx-request button { background: var(--azul-escuro); }
+  form.htmx-request .rotulo-botao { opacity: 0.85; }
+  @keyframes girar { to { transform: rotate(360deg); } }
+
+  /* ---------- resultado ---------- */
+
+  .vazio {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 30px 10px;
+    text-align: center;
+    color: var(--tinta-apagada);
+    font-size: 13.5px;
+  }
+  .vazio svg { width: 34px; height: 34px; stroke: #d8d7d0; fill: none; stroke-width: 1.5; }
+
+  .numerao { display: flex; align-items: baseline; gap: 9px; }
+  .numerao b { font-size: 46px; font-weight: 650; line-height: 1; letter-spacing: -0.02em; }
+  .numerao span { font-size: 12.5px; color: var(--tinta-secundaria); }
+
+  .etiqueta {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 14px;
+    padding: 5px 13px 5px 10px;
+    border-radius: 999px;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: #fff;
+  }
+  /* O ponto é redundante com o texto de propósito: a cor nunca informa sozinha */
+  .etiqueta::before {
+    content: "";
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.85);
+  }
+  .faixa-alto { background: var(--alto); }
+  .faixa-moderado { background: var(--moderado); }
+  .faixa-baixo { background: var(--baixo); }
+
+  /* Medidor: compara a probabilidade prevista com o limiar de decisão do modelo */
+  .medidor { margin-top: 20px; }
+  .medidor-trilha {
+    position: relative;
+    height: 9px;
+    border-radius: 999px;
+    background: #eceae4;
+    overflow: visible;
+  }
+  .medidor-preenchimento {
+    height: 100%;
+    border-radius: 999px;
+    transition: width 0.35s ease-out;
+  }
+  .medidor-limiar {
+    position: absolute;
+    top: -4px;
+    bottom: -4px;
+    width: 2px;
+    background: var(--tinta-secundaria);
+    border-radius: 1px;
+    transform: translateX(-1px);
+  }
+  .medidor-escala {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 7px;
+    font-size: 11px;
+    color: var(--tinta-apagada);
+  }
+
+  .notas {
+    margin-top: 20px;
+    font-size: 12.5px;
+    color: var(--tinta-secundaria);
+    line-height: 1.6;
+  }
+  .notas p { margin: 0 0 8px; }
+  .notas .sutil { color: var(--tinta-apagada); }
+
+  .aviso {
+    margin: 20px 0 0;
+    padding-top: 15px;
+    border-top: 1px solid var(--borda);
+    font-size: 11.5px;
+    color: var(--tinta-apagada);
+    line-height: 1.55;
+  }
+
+  .erro {
+    display: flex;
+    gap: 10px;
+    padding: 14px;
+    border: 1px solid rgba(208, 59, 59, 0.3);
+    border-radius: 9px;
+    background: rgba(208, 59, 59, 0.05);
+    font-size: 13.5px;
+    color: var(--alto);
+  }
+  .erro svg { flex: none; width: 17px; height: 17px; margin-top: 1px; stroke: currentColor; fill: none; stroke-width: 2; }
+
+  @media (max-width: 780px) {
+    body { padding: 28px 16px 48px; }
+    .colunas, .campos { grid-template-columns: 1fr; }
+    .cartao-resultado { position: static; }
   }
 </style>
 </head>
 <body>
 <div class="conteudo">
   <header>
-    <h1>Avaliação de Risco de AVC</h1>
-    <p class="subtitulo">
-      Modelo de triagem servido por Django Ninja ·
-      <a href="/dashboard">Ver dashboard</a> ·
-      <a href="/api/docs">Documentação da API</a>
-    </p>
+    <span class="marca" aria-hidden="true">
+      <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 12h4l2-5 4 10 2-5h6"/>
+      </svg>
+    </span>
+    <div>
+      <h1>Avaliação de Risco de AVC</h1>
+      <p class="subtitulo">
+        Modelo de triagem servido por Django Ninja ·
+        <a href="/dashboard">Dashboard</a> ·
+        <a href="/api/docs">API</a>
+      </p>
+    </div>
   </header>
 
   <div class="colunas">
-    <form class="cartao"
-          hx-post="/prever"
-          hx-target="#resultado"
-          hx-swap="innerHTML"
-          hx-indicator="body">
+    <form class="cartao" hx-post="/prever" hx-target="#resultado" hx-swap="innerHTML">
       {% csrf_token %}
-      <h2>Dados do paciente</h2>
-      <div class="campos">
-        <div class="campo">
-          <label for="age">Idade</label>
-          <input type="number" id="age" name="age" min="0" max="120" step="1" value="67" required>
-        </div>
 
-        <div class="campo">
-          <label for="gender">Gênero</label>
-          <select id="gender" name="gender">
-            {% for valor, rotulo in opcoes.gender %}<option value="{{ valor }}">{{ rotulo }}</option>{% endfor %}
-          </select>
+      <fieldset>
+        <legend>Perfil</legend>
+        <div class="campos">
+          <div class="campo">
+            <label for="age">Idade</label>
+            <input type="number" id="age" name="age" min="0" max="120" step="1" value="67" required>
+          </div>
+          <div class="campo">
+            <label for="gender">Gênero</label>
+            <select id="gender" name="gender">
+              {% for valor, rotulo in opcoes.gender %}<option value="{{ valor }}">{{ rotulo }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="campo">
+            <label for="ever_married">Já foi casado(a)</label>
+            <select id="ever_married" name="ever_married">
+              {% for valor, rotulo in opcoes.ever_married %}<option value="{{ valor }}">{{ rotulo }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="campo">
+            <label for="Residence_type">Residência</label>
+            <select id="Residence_type" name="Residence_type">
+              {% for valor, rotulo in opcoes.Residence_type %}<option value="{{ valor }}">{{ rotulo }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="campo">
+            <label for="work_type">Ocupação</label>
+            <select id="work_type" name="work_type">
+              {% for valor, rotulo in opcoes.work_type %}<option value="{{ valor }}">{{ rotulo }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="campo">
+            <label for="smoking_status">Tabagismo</label>
+            <select id="smoking_status" name="smoking_status">
+              {% for valor, rotulo in opcoes.smoking_status %}<option value="{{ valor }}">{{ rotulo }}</option>{% endfor %}
+            </select>
+          </div>
         </div>
+      </fieldset>
 
-        <div class="campo">
-          <label for="avg_glucose_level">Glicose média <span class="dica">(mg/dL)</span></label>
-          <input type="number" id="avg_glucose_level" name="avg_glucose_level"
-                 min="0" max="500" step="0.01" value="105.92" required>
+      <fieldset>
+        <legend>Indicadores de saúde</legend>
+        <div class="campos">
+          <div class="campo">
+            <label for="avg_glucose_level">Glicose média <span class="dica">(mg/dL)</span></label>
+            <input type="number" id="avg_glucose_level" name="avg_glucose_level"
+                   min="0" max="500" step="0.01" value="105.92" required>
+          </div>
+          <div class="campo">
+            <label for="bmi">IMC <span class="dica">(opcional)</span></label>
+            <input type="number" id="bmi" name="bmi" min="0" max="100" step="0.1" value="32.5"
+                   placeholder="Deixe vazio para imputar">
+          </div>
+          <div class="campo">
+            <label for="hypertension">Hipertensão</label>
+            <select id="hypertension" name="hypertension">
+              {% for valor, rotulo in opcoes.sim_nao %}<option value="{{ valor }}">{{ rotulo }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="campo">
+            <label for="heart_disease">Doença cardíaca</label>
+            <select id="heart_disease" name="heart_disease">
+              {% for valor, rotulo in opcoes.sim_nao %}<option value="{{ valor }}">{{ rotulo }}</option>{% endfor %}
+            </select>
+          </div>
         </div>
+      </fieldset>
 
-        <div class="campo">
-          <label for="bmi">IMC <span class="dica">(pode ficar em branco)</span></label>
-          <input type="number" id="bmi" name="bmi" min="0" max="100" step="0.1" value="32.5"
-                 placeholder="Deixe vazio para imputar">
-        </div>
-
-        <div class="campo">
-          <label for="hypertension">Hipertensão</label>
-          <select id="hypertension" name="hypertension">
-            {% for valor, rotulo in opcoes.sim_nao %}<option value="{{ valor }}">{{ rotulo }}</option>{% endfor %}
-          </select>
-        </div>
-
-        <div class="campo">
-          <label for="heart_disease">Doença cardíaca</label>
-          <select id="heart_disease" name="heart_disease">
-            {% for valor, rotulo in opcoes.sim_nao %}<option value="{{ valor }}">{{ rotulo }}</option>{% endfor %}
-          </select>
-        </div>
-
-        <div class="campo">
-          <label for="ever_married">Já foi casado(a)</label>
-          <select id="ever_married" name="ever_married">
-            {% for valor, rotulo in opcoes.ever_married %}<option value="{{ valor }}">{{ rotulo }}</option>{% endfor %}
-          </select>
-        </div>
-
-        <div class="campo">
-          <label for="Residence_type">Residência</label>
-          <select id="Residence_type" name="Residence_type">
-            {% for valor, rotulo in opcoes.Residence_type %}<option value="{{ valor }}">{{ rotulo }}</option>{% endfor %}
-          </select>
-        </div>
-
-        <div class="campo">
-          <label for="work_type">Ocupação</label>
-          <select id="work_type" name="work_type">
-            {% for valor, rotulo in opcoes.work_type %}<option value="{{ valor }}">{{ rotulo }}</option>{% endfor %}
-          </select>
-        </div>
-
-        <div class="campo">
-          <label for="smoking_status">Tabagismo</label>
-          <select id="smoking_status" name="smoking_status">
-            {% for valor, rotulo in opcoes.smoking_status %}<option value="{{ valor }}">{{ rotulo }}</option>{% endfor %}
-          </select>
-        </div>
-      </div>
-
-      <button type="submit">Avaliar risco</button>
+      <button type="submit">
+        <svg class="girador" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+          <path d="M12 3a9 9 0 1 0 9 9" />
+        </svg>
+        <span class="rotulo-botao">Avaliar risco</span>
+      </button>
     </form>
 
-    <div class="cartao">
+    <div class="cartao cartao-resultado">
       <h2>Resultado</h2>
       <div id="resultado">
-        <p class="vazio">Preencha os dados ao lado e clique em <strong>Avaliar risco</strong>.</p>
+        <div class="vazio">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M3 12h4l2-5 4 10 2-5h6"/>
+          </svg>
+          <p style="margin: 0;">Preencha os dados e clique em <strong>Avaliar risco</strong>.</p>
+        </div>
       </div>
     </div>
   </div>
