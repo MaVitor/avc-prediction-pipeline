@@ -9,7 +9,7 @@ e um desbalanceamento severo — apenas **4,9%** dos pacientes tiveram AVC.
 
 ## Integrantes do grupo
 
-> Nome: Agnes Gonçalves, Matheus Vitor, Nathan Cavalcante e Fabio Alexandre
+> Nome: Agnes Gonçalves, Mateus Vitor, Nathan Cavalcante e Fábio Alexandre
 
 ## Stack utilizada
 
